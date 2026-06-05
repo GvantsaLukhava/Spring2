@@ -35,7 +35,7 @@ docker-compose up --build -d
 # Stop everything
 docker-compose down
 
-# Stop and DELETE the database volume (⚠️ wipes all data)
+# Stop and DELETE the database volume ( wipes all data)
 docker-compose down -v
 ```
 
@@ -172,6 +172,22 @@ GET /api/products?categoryId=1&minPrice=100&maxPrice=2000&active=true&page=0&siz
 ```
 
 ---
+
+## User experience
+User can also add, delete, modify, deactivate data in simple html based website, which looks like this: 
+
+![1](addproduct.png)
+
+![2](delete.png)
+
+![3](delete2.png)
+
+![4](delete3.png)
+
+![5](setactive.png)
+
+
+
 
 ## Key Concepts Covered
 

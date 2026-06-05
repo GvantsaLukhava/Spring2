@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * Product entity - represents an item stored in the warehouse.
  *
@@ -84,9 +86,10 @@ public class Product {
      * In the DB this creates:
      *   products.category_id → references categories.id
      */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+@ManyToOne
+@JoinColumn(name = "category_id")
+@JsonBackReference // Verhindert, dass die Kategorie rückwärts wieder Produkte lädt
+private Category category;
 
     @PrePersist
     protected void onCreate() {
