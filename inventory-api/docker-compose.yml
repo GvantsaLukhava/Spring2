@@ -1,0 +1,89 @@
+version: '3.8'
+
+# =============================================
+# DOCKER COMPOSE - Multi-container setup
+# =============================================
+# This file defines TWO services:
+# 1. db       - PostgreSQL database
+# 2. app      - Our Spring Boot application
+#
+# They communicate via a shared Docker network (inventory-network).
+# The app connects to the DB using the service name "db" as hostname.
+
+services:
+
+  # ---- DATABASE SERVICE ----
+  db:
+    image: postgres:16-alpine          # Official PostgreSQL image (Alpine = smaller)
+    container_name: inventory-db
+
+    environment:
+      POSTGRES_DB: inventory_db        # Creates this database on first run
+      POSTGRES_USER: inventory_user    # DB username
+      POSTGRES_PASSWORD: inventory_pass # DB password
+
+    ports:
+      - "5432:5432"   # host_port:container_port
+      # Exposes DB to your local machine (useful for tools like DBeaver or pgAdmin)
+      # Remove this in production for security - only the app container needs DB access
+
+    volumes:
+      # NAMED VOLUME: persists database data between container restarts and rebuilds
+      # Without this: every `docker-compose down` would wipe all your data!
+      # With this: data lives in Docker's managed storage, survives restarts
+      - postgres_data:/var/lib/postgresql/data
+      # /var/lib/postgresql/data is where Postgres stores its data files
+
+    networks:
+      - inventory-network
+
+    # Health check: Docker will wait until Postgres is ready before starting the app
+    # Without this, the app might start before the DB is ready → connection error
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 10s      # check every 10 seconds
+      timeout: 5s        # wait up to 5s for a response
+      retries: 5         # fail after 5 consecutive failures
+
+  # ---- APPLICATION SERVICE ----
+  app:
+    build:
+      context: .          # Build context = current directory (where Dockerfile is)
+      dockerfile: Dockerfile
+
+    container_name: inventory-app
+
+    ports:
+      - "8080:8080"       # Exposes the API to your local machine
+
+    environment:
+      # These env vars override the defaults in application.properties
+      # "db" is the hostname - it resolves to the db container on the shared network
+      DB_URL: jdbc:postgresql://db:5432/inventory_db
+      DB_USERNAME: inventory_user
+      DB_PASSWORD: inventory_pass
+
+    depends_on:
+      db:
+        condition: service_healthy   # Wait for DB health check to pass before starting app
+
+    networks:
+      - inventory-network
+
+    # Restart policy: automatically restart if the container crashes
+    restart: on-failure
+
+# ---- NAMED VOLUMES ----
+# Declare volumes here so Docker manages them.
+# Data persists in Docker's volume storage (/var/lib/docker/volumes/ on Linux).
+# Run `docker volume ls` to see them, `docker volume inspect <name>` for details.
+volumes:
+  postgres_data:
+    driver: local   # Default driver, stores on the local machine
+
+# ---- NETWORK ----
+# Isolated network for our services to communicate.
+# Services on the same network can reach each other by service name (e.g. "db").
+networks:
+  inventory-network:
+    driver: bridge
